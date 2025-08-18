@@ -44,10 +44,10 @@ Our best-performing model achieved the following results on the **Bitcoin-Alpha*
 
 | Metric          | Our Model (Best) | SGCL Paper (SOTA) |
 | :-------------- | :--------------- | :---------------- |
-| **F1 (Binary)** | **0.9735** | 0.9748            |
-| **Accuracy** | **0.9496** | 0.9523            |
-| **AUC** | 0.8230           | 0.9104            |
-| **F1 (Macro)** | 0.7261           | 0.7622            |
+| **F1 (Binary)** | **0.9733** | 0.9686            |
+| **F1 (Micro)** | **0.9493** | 0.9527            |
+
+Precision: 0.9584
 
 ---
 ## Installation
