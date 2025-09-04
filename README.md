@@ -2,7 +2,7 @@
 ### mainf2.py -> original graph + centrality augmented graph is fed to the contrastive learning model.
 ### mainf3.py -> random walk augmented graph + centrality augmented graph is fed to the contrastive learning model.
 
-# A Novel Contrastive Learning Framework for Signed Graphs
+# Structural Balance aware Contrastive Learning Framework for Signed Networks
 
 ![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)
 ![PyTorch](https://img.shields.io/badge/PyTorch-%23EE4C2C.svg?style=flat&logo=pytorch&logoColor=white)
