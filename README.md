@@ -106,4 +106,4 @@ To run this project, it's recommended to use a virtual environment.
 
 ## Citing Our Work
 
-If you use this code in your research, please consider citing:
+If you use this code in your research, please consider citing.
