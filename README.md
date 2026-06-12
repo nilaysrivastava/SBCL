@@ -1,109 +1,362 @@
-### mainf1.py -> original graph + random walk augmented graph is fed to the contrastive learning model.
-### mainf2.py -> original graph + centrality augmented graph is fed to the contrastive learning model.
-### mainf3.py -> random walk augmented graph + centrality augmented graph is fed to the contrastive learning model.
+<div align="center">
 
-# Structural Balance aware Contrastive Learning Framework for Signed Networks
+# Structural Balance aware Contrastive Learning for Signed Networks
 
-![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)
-![PyTorch](https://img.shields.io/badge/PyTorch-%23EE4C2C.svg?style=flat&logo=pytorch&logoColor=white)
-![DGL](https://img.shields.io/badge/DGL-blueviolet.svg)
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+**A polarity-aware graph contrastive learning framework for signed link prediction.**
 
-This repository contains the implementation of a novel self-supervised contrastive learning framework for signed graph networks. We introduce and evaluate two innovative graph augmentation strategies—one based on **signed random walks** and another on **eigenvector centrality**—to learn robust, sign-aware node representations.
+![Python](https://img.shields.io/badge/Python-3.9%2B-blue?style=for-the-badge&logo=python)
+![PyTorch](https://img.shields.io/badge/PyTorch-Deep%20Learning-ee4c2c?style=for-the-badge&logo=pytorch)
+![DGL](https://img.shields.io/badge/DGL-Graph%20Learning-6f42c1?style=for-the-badge)
+![GNN](https://img.shields.io/badge/GNN-Signed%20Networks-2ea44f?style=for-the-badge)
+![Status](https://img.shields.io/badge/Research-Manuscript%20in%20Progress-orange?style=for-the-badge)
 
-Our framework, which incorporates an advanced **joint training** methodology with an **intra-view contrastive loss**, achieves state-of-the-art performance on the link sign prediction task, rivaling the published SGCL model on the Bitcoin-Alpha benchmark.
-
----
-## Key Features
-
-* **Novel Augmentation Strategies**: Implements two new augmentation techniques tailored for signed networks:
-    1.  **Signed Random Walk ($S^2$)**: Captures implicit, 2-hop structural relationships.
-    2.  **Signed Eigenvector Centrality**: Reinforces the structural roles of influential positive and negative nodes.
-* **Advanced Contrastive Learning**: Uses a sophisticated joint training objective that combines a supervised loss with both **inter-view** and **intra-view** contrastive losses to learn highly separable embeddings.
-* **State-of-the-Art Performance**: Achieves a **Binary F1-Score of 97.35%** on the Bitcoin-Alpha dataset, demonstrating performance on par with existing state-of-the-art models.
-* **Modular Experiments**: The code is structured to easily run and compare different augmentation strategies.
+</div>
 
 ---
-## Methodology & Experiments
 
-We evaluate three distinct contrastive learning setups, each corresponding to a main script:
+## Overview
 
-1.  **`mainf1.py`: Structural Augmentation**
-    * Contrasts the **Original Graph** against a view augmented by **Signed Random Walks**. This tests the model's ability to learn from structural perturbations.
+Signed networks model relationships that can be either **positive** or **negative** — for example, trust/distrust, support/opposition, friendship/hostility, or agreement/disagreement. Unlike ordinary graphs, signed graphs carry polarity, which makes representation learning more challenging.
 
-2.  **`mainf2.py`: Role-Based Augmentation**
-    * Contrasts the **Original Graph** against a view augmented by **Signed Eigenvector Centrality**. This tests the model's ability to learn from perturbations based on node importance.
+This project implements a **Structural Balance aware Contrastive Learning Framework for Signed Networks**. The goal is to learn robust node embeddings for **signed link prediction**, where the model predicts whether a relationship between two nodes is positive or negative.
 
-3.  **`mainf3.py`: Hybrid Augmentation (Most Advanced)**
-    * Contrasts the **Random Walk** view against the **Centrality** view. This forces the model to learn features that are invariant to both structural and role-based changes, a powerful technique for robust representation learning.
+Instead of applying generic random augmentations to a graph, this framework uses signed-network-specific structural cues inspired by **structural balance theory**. The model learns from complementary graph views while preserving the meaning of positive and negative links.
 
 ---
+
+## Motivation
+
+Most graph contrastive learning methods are designed for unsigned graphs. In unsigned graphs, random edge dropping or feature masking can work well as augmentations. However, in signed networks, these operations can easily destroy important polarity patterns.
+
+For example:
+
+- A friend of a friend is often a friend.
+- An enemy of an enemy may become a friend.
+- A friend of an enemy may indicate a negative relationship.
+
+These patterns are not just graph structure; they carry social meaning. If augmentations ignore edge signs, the model may learn from unrealistic views of the network.
+
+This project focuses on a simple idea:
+
+> Signed graph augmentations should preserve signed-network semantics instead of treating all edges as ordinary connections.
+
+---
+
+## Key Ideas
+
+### 1. Polarity-Aware Encoding
+
+Positive and negative edges are processed through separate GNN channels. This prevents positive and negative signals from being mixed too early and helps preserve the meaning of each relation type.
+
+### 2. Structural-Balance-Aware Augmentation
+
+The framework creates meaningful graph views using signed structural priors rather than purely random perturbations.
+
+Main augmentation views include:
+
+- **Signed random-walk-based view** to capture second-order balance patterns.
+- **Centrality-based view** to highlight influential nodes and polarized hubs.
+
+### 3. Joint Learning Objective
+
+The model is trained using both supervised and self-supervised objectives:
+
+- **Supervised link sign prediction loss** for the downstream prediction task.
+- **Inter-view contrastive loss** to align representations across augmented graph views.
+- **Intra-view contrastive loss** to keep final embeddings closer to positive-channel evidence and farther from negative-channel evidence.
+
+---
+
+## Problem Statement
+
+Given a signed graph:
+
+```text
+G = (V, E, S)
+```
+
+where:
+
+- `V` is the set of nodes,
+- `E` is the set of observed edges,
+- `S` represents the sign of an edge: `+1` for positive and `-1` for negative,
+
+predict the sign of an unseen or held-out edge between two nodes.
+
+---
+
+## Architecture
+
+```text
+Signed Graph
+     │
+     ├── Positive Edge View ──► Positive GNN Encoder ──┐
+     │                                                  │
+     ├── Negative Edge View ──► Negative GNN Encoder ──┼──► Fusion Head ──► Link Sign Predictor
+     │                                                  │
+     └── Augmented Views ─────► Contrastive Objectives ─┘
+```
+
+The model learns node representations by combining:
+
+- polarity-separated message passing,
+- signed graph augmentations,
+- contrastive alignment across graph views,
+- and supervised link sign prediction.
+
+---
+
+## Dataset
+
+The main experimental dataset is the **Bitcoin-OTC signed trust network**.
+
+| Dataset | Nodes | Positive Links | Negative Links | Positive Ratio | Sparsity |
+|---|---:|---:|---:|---:|---:|
+| Bitcoin-OTC | 5,881 | 32,029 | 3,563 | 0.8999 | 0.1029% |
+
+The dataset is challenging because it is:
+
+- highly sparse,
+- heavily imbalanced toward positive links,
+- noisy due to real-world trust/distrust behavior,
+- and long-tailed in node degree distribution.
+
+---
+
 ## Results
 
-Our best-performing model achieved the following results on the **Bitcoin-Alpha** dataset, demonstrating its competitiveness with the state-of-the-art SGCL model.
+The framework was evaluated using an 85/15 train-test split on Bitcoin network experiments.
 
-| Metric          | Our Model (Best) | SGCL Paper (SOTA) |
-| :-------------- | :--------------- | :---------------- |
-| **F1 (Binary)** | **0.9733** | 0.9686            |
-| **F1 (Micro)** | **0.9493** | 0.9527            |
+| Metric | Best / Reported Value |
+|---|---:|
+| Accuracy | ~0.9496 |
+| Precision | up to 0.961 |
+| Recall | up to 0.9888 |
+| Binary F1 | 0.9733 |
+| Micro F1 | 0.9493 |
 
-Precision: 0.9584
+> Results may vary slightly depending on the split, random seed, augmentation configuration, and threshold selection.
+
+The model performs strongly on operating-point metrics such as F1, precision, and recall, which are important for practical use cases like trust assessment, fraud detection, and moderation systems.
 
 ---
+
+## Ablation and Robustness
+
+The project includes experiments to understand the contribution of different components:
+
+- baseline signed GNN setup,
+- random-walk augmentation,
+- centrality-based augmentation,
+- dual-view contrastive learning,
+- and sparsity-based robustness analysis.
+
+A key focus is evaluating whether the model remains stable when the graph becomes more sparse or noisy.
+
+---
+
+## Tech Stack
+
+- **Python**
+- **PyTorch**
+- **Deep Graph Library (DGL)**
+- **NumPy**
+- **Pandas**
+- **Scikit-learn**
+- **Matplotlib**
+- **NetworkX**
+
+---
+
+## Suggested Project Structure
+
+```text
+.
+├── data/
+│   ├── raw/
+│   └── processed/
+├── configs/
+│   └── sbcl.yaml
+├── src/
+│   ├── data/
+│   │   ├── load_data.py
+│   │   └── preprocess.py
+│   ├── augmentations/
+│   │   ├── random_walk.py
+│   │   └── centrality.py
+│   ├── models/
+│   │   ├── encoder.py
+│   │   └── sbcl.py
+│   ├── losses/
+│   │   └── contrastive_loss.py
+│   ├── train.py
+│   └── evaluate.py
+├── notebooks/
+├── results/
+├── requirements.txt
+└── README.md
+```
+
+If your local repository uses a different layout, keep this README as a clean reference and update the script paths accordingly.
+
+---
+
 ## Installation
 
-To run this project, it's recommended to use a virtual environment.
+```bash
+git clone https://github.com/nilaysrivastava/<repo-name>.git
+cd <repo-name>
 
-1.  **Clone the repository:**
-    ```bash
-    git clone [https://github.com/your_username/your_project_repo.git](https://github.com/your_username/your_project_repo.git)
-    cd your_project_repo
-    ```
+python -m venv .venv
+source .venv/bin/activate   # On Windows: .venv\Scripts\activate
 
-2.  **Create and activate a virtual environment:**
-    ```bash
-    python3 -m venv sgcl_env
-    source sgcl_env/bin/activate
-    ```
-
-3.  **Install the required libraries:**
-    ```bash
-    pip install -r requirements.txt
-    ```
-    *(You will need to create a `requirements.txt` file containing the following libraries)*:
-    ```
-    torch
-    dgl
-    pandas
-    numpy
-    scipy
-    scikit-learn
-    matplotlib
-    seaborn
-    ```
+pip install -r requirements.txt
+```
 
 ---
-## Usage
 
-1.  **Download the Datasets**: Make sure your signed network files (`soc-sign-bitcoinalpha.csv`, `epinions.txt`, etc.) are in the root directory of the project.
+## Data Preparation
 
-2.  **Run an Experiment**: To run one of the three main experiments, simply execute the corresponding Python script. Make sure the `DATA_PATH` variable in the script is set to the correct dataset.
+Place the dataset inside:
 
-    * **To run the Random Walk vs. Original Graph experiment:**
-        ```bash
-        python3 mainf1.py
-        ```
-    * **To run the Centrality vs. Original Graph experiment:**
-        ```bash
-        python3 mainf2.py
-        ```
-    * **To run the Random Walk vs. Centrality experiment:**
-        ```bash
-        python3 mainf3.py
-        ```
+```text
+data/raw/
+```
 
-3.  **Outputs**: The script will print the per-epoch progress and the final evaluation metrics to the console. The **Confusion Matrix** and **ROC Curve** plots will be saved as `.png` files in the project directory.
+Expected edge-list format:
 
-## Citing Our Work
+```csv
+source,target,sign
+0,1,1
+2,4,-1
+...
+```
 
-If you use this code in your research, please consider citing.
+where `sign = 1` indicates a positive edge and `sign = -1` indicates a negative edge.
+
+---
+
+## Training
+
+Example training command:
+
+```bash
+python src/train.py \
+  --dataset bitcoin_otc \
+  --augmentation dual \
+  --epochs 200 \
+  --hidden-dim 128 \
+  --lr 0.001
+```
+
+Train using a specific augmentation:
+
+```bash
+python src/train.py --dataset bitcoin_otc --augmentation random_walk
+python src/train.py --dataset bitcoin_otc --augmentation centrality
+python src/train.py --dataset bitcoin_otc --augmentation dual
+```
+
+---
+
+## Evaluation
+
+```bash
+python src/evaluate.py \
+  --dataset bitcoin_otc \
+  --checkpoint results/checkpoints/best_model.pt
+```
+
+Recommended metrics:
+
+- Accuracy
+- Precision
+- Recall
+- Binary F1
+- Micro F1
+- AUC
+
+For imbalanced signed networks, F1-based metrics are especially useful because they reflect fixed-threshold decision quality better than ranking metrics alone.
+
+---
+
+## Why This Matters
+
+Signed link prediction has applications in:
+
+- trust and reputation systems,
+- fraud and risk analysis,
+- social network mining,
+- recommendation systems,
+- community analysis,
+- and moderation pipelines.
+
+In these settings, negative links are often rare but highly informative. A model that ignores polarity or class imbalance may perform well superficially while missing the most important minority patterns.
+
+---
+
+## Limitations
+
+This project is research-oriented and has some practical limitations:
+
+- Signed networks are sparse and imbalanced, which makes training sensitive to splits and thresholds.
+- Dual-view contrastive learning increases computational cost.
+- Centrality computation can become unstable or expensive on larger graphs.
+- The current implementation focuses mainly on static signed networks.
+- More evaluation is needed on larger, weighted, directed, and temporal signed graphs.
+
+---
+
+## Future Work
+
+Planned extensions include:
+
+- evaluating on more signed network datasets such as Slashdot, Epinions, Reddit, and Wiki-RFA,
+- extending augmentations to multi-hop signed random walks,
+- adding probabilistic thresholds during augmentation,
+- improving scalability for larger graphs,
+- supporting temporal signed networks,
+- and studying weighted or directed signed relationships.
+
+---
+
+## Research Status
+
+This work was developed as an academic research / thesis project at **ABV-IIITM Gwalior** under the supervision of **Dr. Roshni Chakraborty**.
+
+A manuscript based on this work is currently in preparation.
+
+---
+
+## Contributors
+
+- **Nilay Srivastava**
+- Shreya Vidyadhar
+- Aradhya Dixit
+- Shruti Chauhan
+
+Supervisor: **Dr. Roshni Chakraborty**
+
+---
+
+## Citation
+
+If you use or refer to this work, please cite it as:
+
+```bibtex
+@misc{srivastava2025sbcl,
+  title        = {Structural Balance aware Contrastive Learning Framework for Signed Networks},
+  author       = {Srivastava, Nilay and Dixit, Aradhya and Vidyadhar, Shreya and Chauhan, Shruti},
+  year         = {2025},
+  institution  = {ABV-IIITM Gwalior},
+  note         = {Manuscript in preparation}
+}
+```
+
+---
+
+<div align="center">
+
+**Built to preserve the meaning of signed relationships, not just the structure of a graph.**
+
+</div>
