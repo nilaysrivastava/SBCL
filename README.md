@@ -295,18 +295,6 @@ In these settings, negative links are often rare but highly informative. A model
 
 ---
 
-## Limitations
-
-This project is research-oriented and has some practical limitations:
-
-- Signed networks are sparse and imbalanced, which makes training sensitive to splits and thresholds.
-- Dual-view contrastive learning increases computational cost.
-- Centrality computation can become unstable or expensive on larger graphs.
-- The current implementation focuses mainly on static signed networks.
-- More evaluation is needed on larger, weighted, directed, and temporal signed graphs.
-
----
-
 ## Future Work
 
 Planned extensions include:
